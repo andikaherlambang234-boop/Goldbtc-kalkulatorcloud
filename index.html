@@ -1,237 +1,451 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>QUANT-SMC AUTO TERMINAL</title>
-    
-    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <script src="https://cdn.tailwindcss.com"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Quantum Trader Dashboard</title>
 
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Inter:wght@400;700;900&display=swap');
-        body { font-family: 'Inter', sans-serif; background-color: #020617; color: #e2e8f0; margin: 0; overflow-x: hidden; touch-action: manipulation; }
-        .mono { font-family: 'JetBrains Mono', monospace; }
-        .glass { background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(15px); border: 1px solid rgba(255, 255, 255, 0.08); }
-        .quantum-grad { background: linear-gradient(135deg, #4f46e5 0%, #9333ea 50%, #db2777 100%); }
-        input { font-size: 16px !important; }
-        .fade-in { animation: fadeIn 0.4s ease-out forwards; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-    </style>
+  <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+  
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <style>
+    /* Reset CSS dasar untuk menyesuaikan tema */
+    body, html {
+      margin: 0;
+      padding: 0;
+      background-color: #050508;
+      color: #c0c0d0;
+      font-family: 'Courier New', monospace;
+    }
+  </style>
 </head>
 <body>
-    <div id="root"></div>
+  <div id="root"></div>
 
-    <script type="text/babel">
-        const { useState } = React;
+  <script type="text/babel">
+    // Menggantikan "import { useState, useMemo } from 'react';"
+    const { useState, useMemo } = React;
 
-        const fmt = (val, dec = 2) => (val === undefined || isNaN(val) || val === null) ? "—" : Number(val).toFixed(dec);
+    // ── QUANTUM PHYSICS CONSTANTS ──────────────────────────────────────────
+    const PLANCK = 6.62607015e-34;
+    const HBAR   = PLANCK / (2 * Math.PI);
+    const GOLDEN = 1.6180339887;
+    const ALPHA  = 7.2973525693e-3; // fine-structure constant
 
-        function App() {
-            const [high, setHigh] = useState("");
-            const [low, setLow] = useState("");
-            const [price, setPrice] = useState("");
-            const [calc, setCalc] = useState(null);
+    // ── FIBONACCI RATIOS ───────────────────────────────────────────────────
+    const FIB_RETRACE  = [0, 0.236, 0.382, 0.5, 0.618, 0.786, 1.0];
+    const FIB_EXTEND   = [1.272, 1.414, 1.618, 2.0, 2.618];
 
-            const runAutomatedAnalysis = () => {
-                const H = parseFloat(high);
-                const L = parseFloat(low);
-                const P = parseFloat(price);
+    // ── HELPER FUNCTIONS ───────────────────────────────────────────────────
+    function fmt(val, decimals = 2) {
+      if (val === undefined || val === null || isNaN(val)) return "–";
+      return Number(val).toFixed(decimals);
+    }
 
-                if (isNaN(H) || isNaN(L) || isNaN(P) || H <= L) {
-                    alert("Mohon masukkan data yang benar. High harus lebih besar dari Low.");
-                    return;
-                }
+    function quantumEnergyLevel(n, range) {
+      const scaledH = HBAR * 1e34;
+      return (n * n * scaledH * Math.PI * Math.PI) / (2 * range * range) * range * 0.001;
+    }
 
-                const range = H - L;
-                const mid = (H + L) / 2;
+    function planckFreq(priceRange, swingLow) {
+      const hScaled = PLANCK * 1e34;
+      return (priceRange / swingLow) / hScaled * 0.000001;
+    }
 
-                // --- 1. AUTOMATED SUPPORT & RESISTANCE ---
-                const strongRes = H;
-                const strongSup = L;
-                const midRes = H - (range * 0.382);
-                const midSup = L + (range * 0.236);
+    function uncertaintyBand(price, range) {
+      const hbarScaled = HBAR * 1e34;
+      const deltaP = hbarScaled / (2 * (range / price));
+      return deltaP * price * 0.0001;
+    }
 
-                // --- 2. AUTOMATED SMC (Supply & Demand) ---
-                // Demand Zone = bottom 10% of range, Supply Zone = top 10% of range
-                const demandTop = L + (range * 0.1);
-                const demandBot = L;
-                const supplyTop = H;
-                const supplyBot = H - (range * 0.1);
-                
-                const inDemand = (P <= demandTop && P >= demandBot);
-                const inSupply = (P >= supplyBot && P <= supplyTop);
+    function waveFunction(currentPrice, swingLow, swingHigh) {
+      const L = swingHigh - swingLow;
+      const x = currentPrice - swingLow;
+      const psi = Math.sin(Math.PI * x / L);
+      return psi; 
+    }
 
-                // --- 3. AUTOMATED MARKET STRUCTURE ---
-                let ms = "RANGING";
-                let msColor = "#94a3b8";
-                if (P > H) { ms = "BOS BULLISH"; msColor = "#22c55e"; }
-                else if (P < L) { ms = "BOS BEARISH"; msColor = "#ef4444"; }
-                else if (P > mid && P < H) { ms = "BULLISH INTERNAL"; msColor = "#86efac"; }
-                else { ms = "BEARISH INTERNAL"; msColor = "#fca5a5"; }
+    function atomicOrbital(price, swingLow, swingHigh) {
+      const mid   = (swingHigh + swingLow) / 2;
+      const range = swingHigh - swingLow;
+      const relPos = (price - mid) / (range / 2); 
+      const n      = Math.max(1, Math.round(Math.abs(relPos) * 5));
+      const energy = -13.6 / (n * n);
+      return { n, energy, relPos };
+    }
 
-                // --- 4. AUTOMATED ORDER FLOW ---
-                const flow = P > mid ? "BULLISH FLOW" : "BEARISH FLOW";
-                const flowColor = flow === "BULLISH FLOW" ? "#22c55e" : "#ef4444";
+    // ── MAIN CALCULATOR ENGINE ─────────────────────────────────────────────
+    function calcEngine(swingHigh, swingLow, currentPrice, volume, asset) {
+      if (!swingHigh || !swingLow || !currentPrice) return null;
+      const H = parseFloat(swingHigh);
+      const L = parseFloat(swingLow);
+      const P = parseFloat(currentPrice);
+      if (isNaN(H) || isNaN(L) || isNaN(P) || H <= L) return null;
 
-                // --- 5. AUTOMATED FIBONACCI ---
-                const fib618 = H - (range * 0.618); // Golden Ratio
-                const fib50 = mid;
+      const range   = H - L;
+      const pip     = asset === "BITCOIN" ? 1 : 0.01;
+      const decimals = asset === "BITCOIN" ? 0 : 2;
 
-                // --- 6. MATH SCORING SYSTEM (CONFLUENCE) ---
-                let score = 0;
-                if (inDemand && flow === "BULLISH FLOW") score += 50;
-                if (inSupply && flow === "BEARISH FLOW") score += 50;
-                if (Math.abs(P - fib618) < (range * 0.05)) score += 30;
-                if (ms.includes("BOS")) score += 20;
+      const fibLevels = FIB_RETRACE.map(r => ({
+        ratio: r, label: `${(r * 100).toFixed(1)}%`, price: H - r * range, type: "retracement",
+      }));
+      const fibExt = FIB_EXTEND.map(r => ({
+        ratio: r, label: `${(r * 100).toFixed(1)}%`, price: L + r * range, type: "extension",
+      }));
 
-                // Signal Conclusion
-                let signal = "NEUTRAL", sColor = "#94a3b8";
-                let entry = P, sl = P, tp = P;
+      const demandHigh = L + range * 0.15;
+      const demandLow  = L - range * 0.05;
+      const supplyLow  = H - range * 0.15;
+      const supplyHigh = H + range * 0.05;
 
-                if (score >= 60) {
-                    if (flow === "BULLISH FLOW") {
-                        signal = "STRONG BUY"; sColor = "#22c55e";
-                        entry = inDemand ? demandTop : fib618;
-                        sl = L - (range * 0.02);
-                        tp = H;
-                    } else {
-                        signal = "STRONG SELL"; sColor = "#ef4444";
-                        entry = inSupply ? supplyBot : H - (range * 0.382);
-                        sl = H + (range * 0.02);
-                        tp = L;
-                    }
-                } else if (score >= 30) {
-                    signal = "CONSIDER TRADE"; sColor = "#f59e0b";
-                    entry = P;
-                    sl = flow === "BULLISH FLOW" ? L : H;
-                    tp = flow === "BULLISH FLOW" ? H : L;
-                }
+      const sr = [
+        { label: "S3", price: L - range * 0.382 },
+        { label: "S2", price: L - range * 0.236 },
+        { label: "S1", price: L + range * 0.236 },
+        { label: "MID", price: (H + L) / 2 },
+        { label: "R1", price: H - range * 0.236 },
+        { label: "R2", price: H + range * 0.236 },
+        { label: "R3", price: H + range * 0.382 },
+      ];
 
-                setCalc({
-                    signal, sColor, score, entry, sl, tp,
-                    ms, msColor, flow, flowColor,
-                    strongRes, strongSup, midRes, midSup,
-                    demandTop, supplyBot,
-                    fib618, fib50,
-                    inDemand, inSupply
-                });
-            };
+      const psi        = waveFunction(P, L, H);
+      const orbital    = atomicOrbital(P, L, H);
+      const uncertainty = uncertaintyBand(P, range);
+      const freq       = planckFreq(range, L);
+      const qLevels    = [1,2,3,4,5].map(n => ({
+        n, energy: quantumEnergyLevel(n, range), price: L + (n / 5) * range,
+      }));
 
-            return (
-                <div className="min-h-screen p-4 pb-10 max-w-md mx-auto">
-                    <header className="text-center mb-8">
-                        <h1 className="text-2xl font-black text-white italic tracking-tighter">
-                            <span className="text-indigo-500">SMC</span> QUANT <span className="text-[10px] bg-indigo-600 px-2 py-0.5 rounded-full not-italic uppercase">Auto v5.0</span>
-                        </h1>
-                        <p className="text-slate-500 text-[10px] mono mt-1 uppercase tracking-widest">Automated Technical Analysis</p>
-                    </header>
+      const psiSquared = psi * psi; 
+      const momentum   = psi > 0 ? "BULLISH" : "BEARISH";
+      const alphaCorrection = ALPHA * range;
 
-                    {/* MINIMAL INPUT PANEL */}
-                    <div className="glass rounded-3xl p-6 mb-6 space-y-5 shadow-2xl border-indigo-500/20">
-                        <div className="space-y-4">
-                            <div>
-                                <label className="text-[10px] text-slate-500 block mb-1 font-bold uppercase">Swing High</label>
-                                <input type="number" value={high} onChange={e => setHigh(e.target.value)} className="w-full bg-slate-900 border border-white/10 rounded-xl px-4 py-3 text-white mono outline-none focus:border-indigo-500 transition-all" placeholder="0.00" />
-                            </div>
-                            <div>
-                                <label className="text-[10px] text-slate-500 block mb-1 font-bold uppercase">Swing Low</label>
-                                <input type="number" value={low} onChange={e => setLow(e.target.value)} className="w-full bg-slate-900 border border-white/10 rounded-xl px-4 py-3 text-white mono outline-none focus:border-indigo-500 transition-all" placeholder="0.00" />
-                            </div>
-                            <div>
-                                <label className="text-[10px] text-slate-500 block mb-1 font-bold uppercase">Harga Sekarang</label>
-                                <input type="number" value={price} onChange={e => setPrice(e.target.value)} className="w-full bg-slate-900 border border-white/10 rounded-xl px-4 py-3 text-white mono outline-none focus:border-indigo-500 transition-all" placeholder="0.00" />
-                            </div>
-                        </div>
-                        <button onClick={runAutomatedAnalysis} className="w-full py-4 rounded-2xl quantum-grad text-white font-black uppercase tracking-widest shadow-lg active:scale-95 transition-transform">
-                            Analyze Everything
-                        </button>
-                    </div>
+      const posInRange  = (P - L) / range; 
+      const orderFlow   = posInRange < 0.4 ? "BUY PRESSURE"
+                        : posInRange > 0.6 ? "SELL PRESSURE"
+                        : "NEUTRAL";
+      const ofScore     = (posInRange < 0.5 ? (0.5 - posInRange) : -(posInRange - 0.5)) * 200; 
 
-                    {/* AUTOMATED RESULTS */}
-                    {calc && (
-                        <div className="fade-in space-y-4">
-                            {/* Main Signal */}
-                            <div className="glass rounded-3xl p-6 text-center border-t-4 border-indigo-500">
-                                <div className="text-[10px] font-bold text-slate-500 uppercase mb-1">Final Signal</div>
-                                <div className="text-4xl font-black mb-2 tracking-tighter" style={{ color: calc.sColor }}>{calc.signal}</div>
-                                
-                                <div className="flex flex-wrap justify-center gap-2 mb-6">
-                                    <span className="px-2 py-1 rounded-md text-[9px] font-bold border bg-blue-500/20 text-blue-400 border-blue-500/40" style={{color: calc.msColor}}>{calc.ms}</span>
-                                    <span className="px-2 py-1 rounded-md text-[9px] font-bold border bg-green-500/20 text-green-400 border-green-500/40" style={{color: calc.flowColor}}>{calc.flow}</span>
-                                    <span className="px-2 py-1 rounded-md text-[9px] font-bold border bg-amber-500/20 text-amber-400 border-amber-500/40">
-                                        {calc.inDemand ? "DEMAND ZONE" : calc.inSupply ? "SUPPLY ZONE" : "NO ZONE"}
-                                    </span>
-                                </div>
+      const volMult = volume === "HIGH" ? 1.5 : volume === "LOW" ? 0.7 : 1.0;
+      const volBias = volume === "HIGH"
+        ? (posInRange < 0.5 ? "HIGH VOLUME BUY" : "HIGH VOLUME SELL")
+        : "MODERATE";
 
-                                <div className="space-y-2 text-left">
-                                    <div className="flex justify-between p-3 bg-white/5 rounded-xl">
-                                        <span className="text-xs text-slate-400">ENTRY LIMIT</span>
-                                        <span className="text-sm font-bold mono text-white">{fmt(calc.entry)}</span>
-                                    </div>
-                                    <div className="flex justify-between p-3 bg-red-500/10 rounded-xl">
-                                        <span className="text-xs text-slate-400">STOP LOSS</span>
-                                        <span className="text-sm font-bold mono text-red-500">{fmt(calc.sl)}</span>
-                                    </div>
-                                    <div className="flex justify-between p-3 bg-green-500/10 rounded-xl">
-                                        <span className="text-xs text-slate-400">TAKE PROFIT</span>
-                                        <span className="text-sm font-bold mono text-green-500">{fmt(calc.tp)}</span>
-                                    </div>
-                                </div>
-                                <div className="mt-4 text-center">
-                                    <div className="text-[10px] text-slate-500 mb-1 uppercase">Confluence Accuracy</div>
-                                    <div className="text-lg font-black mono text-indigo-400">{calc.score}%</div>
-                                </div>
-                            </div>
+      const fibNearest = [...fibLevels, ...fibExt].reduce((prev, cur) =>
+        Math.abs(cur.price - P) < Math.abs(prev.price - P) ? cur : prev
+      );
+      const fibScore = fibNearest.ratio <= 0.5 ? 30 : -30;
 
-                            {/* Automated Technical Data */}
-                            <div className="grid grid-cols-1 gap-4">
-                                <div className="glass rounded-3xl p-5">
-                                    <h3 className="text-xs font-bold text-slate-500 uppercase mb-4">S&R & SMC Zones</h3>
-                                    <div className="space-y-3">
-                                        <div className="flex justify-between items-center py-2 border-b border-white/5">
-                                            <span className="text-xs text-slate-400">Strong Resistance</span>
-                                            <span className="text-sm font-bold mono text-red-400">{fmt(calc.strongRes)}</span>
-                                        </div>
-                                        <div className="flex justify-between items-center py-2 border-b border-white/5">
-                                            <span className="text-xs text-slate-400">Strong Support</span>
-                                            <span className="text-sm font-bold mono text-green-400">{fmt(calc.strongSup)}</span>
-                                        </div>
-                                        <div className="flex justify-between items-center py-2 border-b border-white/5">
-                                            <span className="text-xs text-slate-400">Supply Zone (Top)</span>
-                                            <span className="text-sm font-bold mono text-red-300">{fmt(calc.supplyBot)} - {fmt(calc.supplyTop)}</span>
-                                        </div>
-                                        <div className="flex justify-between items-center py-2 border-b border-white/5">
-                                            <span className="text-xs text-slate-400">Demand Zone (Bot)</span>
-                                            <span className="text-sm font-bold mono text-green-300">{fmt(calc.demandBot)} - {fmt(calc.demandTop)}</span>
-                                        </div>
-                                    </div>
-                                </div>
+      let score = ofScore + fibScore + (psi * 40) + (orbital.energy > -5 ? 10 : -10);
+      score *= volMult;
+      score = Math.max(-100, Math.min(100, score));
 
-                                <div className="glass rounded-3xl p-5">
-                                    <h3 className="text-xs font-bold text-slate-500 uppercase mb-4">Fibonacci Levels</h3>
-                                    <div className="space-y-3">
-                                        <div className="flex justify-between items-center py-2 border-b border-white/5">
-                                            <span className="text-xs text-slate-400">Golden Ratio (61.8%)</span>
-                                            <span className="text-sm font-bold mono text-indigo-400">{fmt(calc.fib618)}</span>
-                                        </div>
-                                        <div className="flex justify-between items-center py-2 border-b border-white/5">
-                                            <span className="text-xs text-slate-400">Equilibrium (50%)</span>
-                                            <span className="text-sm font-bold mono text-slate-300">{fmt(calc.fib50)}</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    )}
+      let signal, signalColor, entry, stopLoss, tp1, tp2, tp3;
+
+      const nearDemand  = P <= demandHigh && P >= demandLow - range * 0.1;
+      const nearSupply  = P >= supplyLow  && P <= supplyHigh + range * 0.1;
+      const fib618      = H - 0.618 * range;
+      const fib382      = H - 0.382 * range;
+      const fib50       = H - 0.5 * range;
+
+      if (score >= 45) {
+        signal = "BUY"; signalColor = "#00ff88"; entry = P;
+        stopLoss = Math.max(L - uncertainty, P - range * 0.15);
+        tp1 = P + range * 0.382; tp2 = P + range * 0.618; tp3 = P + range * 1.0;
+      } else if (score <= -45) {
+        signal = "SELL"; signalColor = "#ff4466"; entry = P;
+        stopLoss = Math.min(H + uncertainty, P + range * 0.15);
+        tp1 = P - range * 0.382; tp2 = P - range * 0.618; tp3 = P - range * 1.0;
+      } else if (score > 15) {
+        signal = "BUY LIMIT"; signalColor = "#ffd700"; entry = fib618 < P ? fib618 : fib50;
+        stopLoss = entry - range * 0.12;
+        tp1 = entry + range * 0.382; tp2 = entry + range * 0.618; tp3 = entry + range * 1.0;
+      } else if (score < -15) {
+        signal = "SELL LIMIT"; signalColor = "#ff8800"; entry = fib382 > P ? fib382 : fib50;
+        stopLoss = entry + range * 0.12;
+        tp1 = entry - range * 0.382; tp2 = entry - range * 0.618; tp3 = entry - range * 1.0;
+      } else {
+        signal = "WAIT / NEUTRAL"; signalColor = "#aaaaaa"; entry = P;
+        stopLoss = P - range * 0.1;
+        tp1 = P + range * 0.236; tp2 = P + range * 0.382; tp3 = P + range * 0.618;
+      }
+
+      const rr = Math.abs(tp2 - entry) / Math.abs(entry - stopLoss);
+
+      return {
+        H, L, P, range, pip, decimals, asset, fibLevels, fibExt, fibNearest,
+        sr, demandHigh, demandLow, supplyLow, supplyHigh, psi, psiSquared, orbital, 
+        uncertainty, freq, qLevels, momentum, alphaCorrection, orderFlow, ofScore, 
+        volume, volMult, volBias, score, signal, signalColor, entry, stopLoss, tp1, 
+        tp2, tp3, rr, posInRange, fib618, fib382, fib50,
+      };
+    }
+
+    // ── COMPONENTS ─────────────────────────────────────────────────────────
+    function Badge({ label, color }) {
+      return (
+        <span style={{
+          background: color + "22", color, border: `1px solid ${color}55`,
+          borderRadius: 4, padding: "2px 8px", fontSize: 11, fontWeight: 700,
+          letterSpacing: 1,
+        }}>{label}</span>
+      );
+    }
+
+    function LevelBar({ price, low, high, color, label, current }) {
+      const pct = Math.max(0, Math.min(100, ((price - low) / (high - low)) * 100));
+      const curPct = Math.max(0, Math.min(100, ((current - low) / (high - low)) * 100));
+      return (
+        <div style={{ marginBottom: 6 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, marginBottom: 2 }}>
+            <span style={{ color: "#888" }}>{label}</span>
+            <span style={{ color }}>{typeof price === "number" ? price.toFixed(2) : price}</span>
+          </div>
+          <div style={{ height: 4, background: "#1a1a2e", borderRadius: 2, position: "relative" }}>
+            <div style={{
+              position: "absolute", left: `${pct}%`, transform: "translateX(-50%)",
+              width: 2, height: "100%", background: color, borderRadius: 1,
+            }} />
+            <div style={{
+              position: "absolute", left: `${curPct}%`, transform: "translateX(-50%)",
+              width: 3, height: 6, background: "#fff", borderRadius: 1, top: -1,
+            }} />
+          </div>
+        </div>
+      );
+    }
+
+    function Card({ title, icon, children, accent = "#ffd700" }) {
+      return (
+        <div style={{
+          background: "linear-gradient(135deg, #0d0d1a 0%, #0a0a14 100%)",
+          border: `1px solid ${accent}22`, borderRadius: 12, padding: "14px 16px", marginBottom: 12,
+        }}>
+          <div style={{
+            color: accent, fontSize: 12, fontWeight: 700, letterSpacing: 2,
+            marginBottom: 10, display: "flex", alignItems: "center", gap: 6,
+            textTransform: "uppercase",
+          }}>
+            <span>{icon}</span> {title}
+          </div>
+          {children}
+        </div>
+      );
+    }
+
+    function Row({ label, value, sub, color = "#e0e0ff" }) {
+      return (
+        <div style={{
+          display: "flex", justifyContent: "space-between", alignItems: "center",
+          padding: "5px 0", borderBottom: "1px solid #1a1a2e",
+        }}>
+          <span style={{ color: "#667", fontSize: 12 }}>{label}</span>
+          <div style={{ textAlign: "right" }}>
+            <span style={{ color, fontSize: 13, fontWeight: 600 }}>{value}</span>
+            {sub && <div style={{ color: "#556", fontSize: 10 }}>{sub}</div>}
+          </div>
+        </div>
+      );
+    }
+
+    // ── MAIN APP ───────────────────────────────────────────────────────────
+    // Menggantikan "export default function App() {"
+    function App() {
+      const [asset,    setAsset]   = useState("XAUUSD");
+      const [high,     setHigh]    = useState("");
+      const [low,      setLow]     = useState("");
+      const [price,    setPrice]   = useState("");
+      const [volume,   setVolume]  = useState("MEDIUM");
+      const [tab,      setTab]     = useState("signal");
+      const [calc,     setCalc]    = useState(null);
+
+      const isXAU = asset === "XAUUSD";
+      const accent = isXAU ? "#ffd700" : "#f7931a";
+      const accent2 = isXAU ? "#ffe066" : "#ffb347";
+
+      function handleCalc() {
+        const result = calcEngine(high, low, price, volume, asset);
+        setCalc(result);
+        if (result) setTab("signal");
+      }
+
+      function reset() { setHigh(""); setLow(""); setPrice(""); setCalc(null); }
+
+      const tabs = [
+        { id: "signal",  label: "⚡ Signal" },
+        { id: "fib",     label: "📐 Fibo" },
+        { id: "zone",    label: "🔥 Zones" },
+        { id: "quantum", label: "⚛️ Quantum" },
+        { id: "flow",    label: "📊 Flow" },
+      ];
+
+      return (
+        <div style={{ fontFamily: "'Courier New', monospace", background: "#050508", minHeight: "100vh", color: "#c0c0d0", maxWidth: 480, margin: "0 auto", paddingBottom: 40 }}>
+          {/* HEADER */}
+          <div style={{ background: `linear-gradient(135deg, #0d0d1a, #050508)`, borderBottom: `2px solid ${accent}44`, padding: "16px 20px 12px", position: "sticky", top: 0, zIndex: 10 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div>
+                <div style={{ color: accent, fontSize: 18, fontWeight: 700, letterSpacing: 2, textShadow: `0 0 20px ${accent}66` }}>⚛ QUANTUM TRADER</div>
+                <div style={{ color: "#556", fontSize: 10, letterSpacing: 3 }}>PLANCK · FIBONACCI · ORDER FLOW</div>
+              </div>
+              <div style={{ display: "flex", gap: 6 }}>
+                {["XAUUSD","BITCOIN"].map(a => (
+                  <button key={a} onClick={() => { setAsset(a); setCalc(null); }} style={{
+                    background: asset === a ? `${accent}22` : "transparent",
+                    border: `1px solid ${asset === a ? accent : "#333"}`,
+                    color: asset === a ? accent : "#666", borderRadius: 6, padding: "4px 10px",
+                    fontSize: 10, fontWeight: 700, cursor: "pointer", letterSpacing: 1,
+                  }}>{a === "XAUUSD" ? "XAU" : "BTC"}</button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div style={{ padding: "16px 16px 0" }}>
+            <Card title="Input Data" icon="📌" accent={accent}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 10 }}>
+                {[
+                  { label: "Swing High", val: high, set: setHigh },
+                  { label: "Swing Low",  val: low,  set: setLow  },
+                  { label: "Harga Saat Ini", val: price, set: setPrice, full: true },
+                ].map(({ label, val, set, full }) => (
+                  <div key={label} style={{ gridColumn: full ? "1/-1" : undefined }}>
+                    <div style={{ color: "#556", fontSize: 10, marginBottom: 4, letterSpacing: 1 }}>{label.toUpperCase()}</div>
+                    <input
+                      type="number" value={val} onChange={e => set(e.target.value)}
+                      placeholder={isXAU ? "e.g. 3350.00" : "e.g. 63000"}
+                      style={{ width: "100%", boxSizing: "border-box", background: "#0a0a14", border: `1px solid ${accent}33`, borderRadius: 8, padding: "8px 12px", color: accent2, fontSize: 14, fontFamily: "inherit", outline: "none" }}
+                    />
+                  </div>
+                ))}
+              </div>
+              <div style={{ marginBottom: 12 }}>
+                <div style={{ color: "#556", fontSize: 10, marginBottom: 6, letterSpacing: 1 }}>VOLUME MARKET</div>
+                <div style={{ display: "flex", gap: 6 }}>
+                  {["LOW","MEDIUM","HIGH"].map(v => (
+                    <button key={v} onClick={() => setVolume(v)} style={{
+                      flex: 1, background: volume === v ? `${accent}22` : "#0a0a14",
+                      border: `1px solid ${volume === v ? accent : "#222"}`, color: volume === v ? accent : "#555",
+                      borderRadius: 6, padding: "6px 0", fontSize: 11, fontWeight: 700, cursor: "pointer", letterSpacing: 1,
+                    }}>{v}</button>
+                  ))}
                 </div>
-            );
-        }
+              </div>
+              <div style={{ display: "flex", gap: 8 }}>
+                <button onClick={handleCalc} style={{ flex: 3, background: `linear-gradient(135deg, ${accent}22, ${accent}11)`, border: `1px solid ${accent}`, color: accent, borderRadius: 8, padding: "10px 0", fontSize: 13, fontWeight: 700, cursor: "pointer", letterSpacing: 2, fontFamily: "inherit", boxShadow: `0 0 20px ${accent}22` }}>⚡ KALKULASI</button>
+                <button onClick={reset} style={{ flex: 1, background: "#0a0a14", border: "1px solid #222", color: "#555", borderRadius: 8, padding: "10px 0", fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}>↺</button>
+              </div>
+            </Card>
 
-        const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<App />);
-    </script>
+            {calc && (<>
+              <div style={{ display: "flex", gap: 4, marginBottom: 12, overflowX: "auto", paddingBottom: 4 }}>
+                {tabs.map(t => (
+                  <button key={t.id} onClick={() => setTab(t.id)} style={{
+                    background: tab === t.id ? `${accent}22` : "#0a0a14", border: `1px solid ${tab === t.id ? accent : "#1a1a2e"}`,
+                    color: tab === t.id ? accent : "#555", borderRadius: 8, padding: "6px 12px", fontSize: 11, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap", fontFamily: "inherit",
+                  }}>{t.label}</button>
+                ))}
+              </div>
+
+              {tab === "signal" && (<>
+                <div style={{ background: `linear-gradient(135deg, ${calc.signalColor}18, ${calc.signalColor}08)`, border: `2px solid ${calc.signalColor}55`, borderRadius: 16, padding: "20px 16px", textAlign: "center", marginBottom: 12 }}>
+                  <div style={{ color: "#556", fontSize: 10, letterSpacing: 3, marginBottom: 8 }}>QUANTUM SIGNAL — {asset}</div>
+                  <div style={{ color: calc.signalColor, fontSize: 28, fontWeight: 900, letterSpacing: 4, textShadow: `0 0 30px ${calc.signalColor}88`, marginBottom: 12 }}>{calc.signal}</div>
+                  <div style={{ display: "flex", justifyContent: "center", gap: 8, flexWrap: "wrap" }}>
+                    <Badge label={`ψ ${calc.momentum}`} color={calc.psi > 0 ? "#00ff88" : "#ff4466"} />
+                    <Badge label={`OF ${calc.orderFlow}`} color={calc.ofScore > 0 ? "#00ff88" : calc.ofScore < 0 ? "#ff4466" : "#888"} />
+                    <Badge label={`VOL ${volume}`} color={volume === "HIGH" ? "#ff8800" : volume === "LOW" ? "#448" : "#668"} />
+                  </div>
+                  <div style={{ marginTop: 14 }}>
+                    <div style={{ color: "#556", fontSize: 10, marginBottom: 4, letterSpacing: 1 }}>COMPOSITE SCORE {calc.score.toFixed(0)} / 100</div>
+                    <div style={{ height: 6, background: "#1a1a2e", borderRadius: 3, overflow: "hidden" }}>
+                      <div style={{
+                        height: "100%", width: `${Math.abs(calc.score)}%`, marginLeft: calc.score > 0 ? "50%" : `${50 - Math.abs(calc.score)}%`,
+                        background: calc.score > 0 ? "linear-gradient(90deg,#00ff88,#00cc66)" : "linear-gradient(90deg,#ff4466,#cc0033)", borderRadius: 3, transition: "all 0.5s",
+                      }} />
+                    </div>
+                  </div>
+                </div>
+
+                <Card title="Trade Setup" icon="🎯" accent={accent}>
+                  <Row label="ENTRY PRICE"  value={fmt(calc.entry, calc.decimals)} color={calc.signalColor} />
+                  <Row label="STOP LOSS"    value={fmt(calc.stopLoss, calc.decimals)} color="#ff4466" sub={`SL: ${fmt(Math.abs(calc.entry - calc.stopLoss), calc.decimals)} pts`} />
+                  <Row label="TP 1 (38.2%)" value={fmt(calc.tp1, calc.decimals)} color="#00dd77" />
+                  <Row label="TP 2 (61.8%)" value={fmt(calc.tp2, calc.decimals)} color="#00ff88" />
+                  <Row label="TP 3 (100%)"  value={fmt(calc.tp3, calc.decimals)} color="#00ffcc" />
+                  <Row label="RISK : REWARD" value={`1 : ${fmt(calc.rr, 2)}`} color={calc.rr >= 2 ? "#00ff88" : calc.rr >= 1 ? "#ffd700" : "#ff4466"} />
+                </Card>
+
+                <Card title="Price Position" icon="📍" accent={accent}>
+                  <div style={{ marginBottom: 8 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, marginBottom: 4 }}><span style={{ color: "#667" }}>Posisi dalam Range</span><span style={{ color: accent }}>{(calc.posInRange * 100).toFixed(1)}%</span></div>
+                    <div style={{ height: 8, background: "#1a1a2e", borderRadius: 4, position: "relative", overflow: "hidden" }}>
+                      <div style={{ position: "absolute", left: 0, top: 0, width: `${calc.posInRange * 100}%`, height: "100%", background: `linear-gradient(90deg, #00ff88, ${accent}, #ff4466)`, borderRadius: 4 }} />
+                    </div>
+                  </div>
+                  <Row label="RANGE TOTAL"   value={fmt(calc.range, calc.decimals)} sub="poin" />
+                  <Row label="UNCERTAINTY BAND" value={`±${fmt(calc.uncertainty, calc.decimals)}`} color="#aa88ff" />
+                </Card>
+              </>)}
+
+              {tab === "fib" && (<>
+                <Card title="Fibonacci Retracement" icon="📐" accent={accent}>
+                  {[...calc.fibLevels].sort((a,b) => b.price - a.price).map(f => (
+                    <LevelBar key={f.ratio} price={f.price} low={calc.L} high={calc.H} current={calc.P} label={`FIB ${f.label}`} color={Math.abs(f.price - calc.P) < calc.range * 0.02 ? "#ff0" : f.ratio <= 0.382 ? "#00ff88" : f.ratio <= 0.618 ? "#ffd700" : "#ff6644"} />
+                  ))}
+                </Card>
+                <Card title="Fibonacci Extension" icon="🔭" accent={accent}>
+                  {calc.fibExt.map(f => <LevelBar key={f.ratio} price={f.price} low={calc.L - calc.range * 0.5} high={calc.H + calc.range * 1.5} current={calc.P} label={`EXT ${f.label}`} color="#aa55ff" />)}
+                </Card>
+              </>)}
+
+              {tab === "zone" && (<>
+                <Card title="Supply Zone" icon="🔴" accent="#ff4466">
+                  <Row label="Zone High" value={fmt(calc.supplyHigh, calc.decimals)} color="#ff4466" />
+                  <Row label="Zone Low"  value={fmt(calc.supplyLow, calc.decimals)}  color="#ff8888" />
+                </Card>
+                <Card title="Demand Zone" icon="🟢" accent="#00ff88">
+                  <Row label="Zone High" value={fmt(calc.demandHigh, calc.decimals)} color="#44ff88" />
+                  <Row label="Zone Low"  value={fmt(calc.demandLow, calc.decimals)}  color="#00cc66" />
+                </Card>
+              </>)}
+
+              {tab === "quantum" && (<>
+                <Card title="Quantum Wave Engine" icon="⚛️" accent="#aa55ff">
+                  <Row label="Wave Function ψ(x)"   value={calc.psi.toFixed(4)}   color="#aa55ff" />
+                  <Row label="Probability |ψ|²"      value={(calc.psiSquared * 100).toFixed(1) + "%"} color="#cc88ff" />
+                </Card>
+                <Card title="Atomic Orbital (Bohr)" icon="🔬" accent="#aa55ff">
+                  <Row label="Orbital Level n"       value={calc.orbital.n}        color="#cc88ff" />
+                  <Row label="Energy E_n (eV)"       value={calc.orbital.energy.toFixed(4)} color="#aa55ff" />
+                </Card>
+              </>)}
+
+              {tab === "flow" && (<>
+                <Card title="Order Flow Analysis" icon="📊" accent="#00aaff">
+                  <Row label="Order Flow"    value={calc.orderFlow}  color={calc.ofScore > 0 ? "#00ff88" : calc.ofScore < 0 ? "#ff4466" : "#888"} />
+                  <Row label="OF Score"      value={`${calc.ofScore.toFixed(1)} / 100`} color="#00aaff" />
+                </Card>
+              </>)}
+            </>)}
+
+            {!calc && (
+              <div style={{ textAlign: "center", padding: "40px 20px", color: "#333" }}>
+                <div style={{ fontSize: 40, marginBottom: 12 }}>⚛</div>
+                <div style={{ fontSize: 12, letterSpacing: 2 }}>MASUKKAN SWING HIGH, SWING LOW<br/>DAN HARGA SAAT INI<br/>LALU TEKAN KALKULASI</div>
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    // ── Inisialisasi React ke dalam DOM ─────────────────────────────────────
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
 </body>
 </html>
+
